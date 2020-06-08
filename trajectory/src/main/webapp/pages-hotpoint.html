@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="indexApp">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!-- Favicon icon -->
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon.png">
+    <title>构建数据集</title>
+    <!-- Custom CSS -->
+    <link href="dist/css/style.css" rel="stylesheet">
+    <link href="css/sweetalert2.css" rel="stylesheet">
+    <link rel="stylesheet" href="layui-v2.5.6/layui/css/layui.css" media="all">
+    <script src="js/sweetalert.min.js"></script>
+    <script src="js/angular/1.6.3/angular.js"></script>
+    <script src="js/angular/1.6.3/angular-route.js"></script>
+    <script src="js/angular/1.6.3/angular-ui-router.js"></script>
+    <script src="js/angular/1.6.3/angular-file-upload.js"></script>
+    <script src="js/jquery-3.4.1.js"></script>
+    <script src="js/ie10-viewport-bug-workaround.js"></script>
+    <script src="js/ie-emulation-modes-warning.js"></script>
+    <script src="layDate-v5.0.9/laydate/laydate.js"></script>
+    <script src="layer-v3.1.1/layer/layer.js"></script>
+    <script src="layui-v2.5.6/layui/layui.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/echarts-gl.min.js"></script>
+    <script src="ng/indexApp.js"></script>
+    <script src="ng/pagesMapCtrl.js"></script>
+    <script type="text/javascript" src="//api.map.baidu.com/api?v=2.0&ak=06iZ5R2wMj2KQBnsbLGGlr77mwxSXkxO"></script>
+    <script type="text/javascript" src="//api.map.baidu.com/library/Heatmap/2.0/src/Heatmap_min.js"></script>
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body class="skin-default-dark fixed-layout" ng-controller="pagesMapCtrl">
+<!-- ============================================================== -->
+<!-- Preloader - style you can find in spinners.css -->
+<!-- ============================================================== -->
+<div class="preloader">
+    <div class="loader">
+        <div class="loader__figure"></div>
+        <p class="loader__label">Elegant admin</p>
+    </div>
+</div>
+<!-- ============================================================== -->
+<!-- Main wrapper - style you can find in pages.scss -->
+<!-- ============================================================== -->
+<div id="main-wrapper">
+    <!-- ============================================================== -->
+    <!-- Topbar header - style you can find in pages.scss -->
+    <!-- ============================================================== -->
+    <header class="topbar">
+        <nav class="navbar top-navbar navbar-expand-md navbar-dark">
+            <!-- ============================================================== -->
+            <!-- Logo -->
+            <!-- ============================================================== -->
+            <div class="navbar-header">
+                <a class="navbar-brand" href="index.html"></a>
+                    <!-- Logo icon --><b>
+                    <!--You can put here icon as well // <i class="wi wi-sunset"></i> //-->
+                    <!-- Dark Logo icon -->
+                    <img src="assets/images/logo-icon.png" alt="homepage" class="dark-logo" />
+                    <!-- Light Logo icon -->
+                    <img src="assets/images/logo-light-icon.png" alt="homepage" class="light-logo" />
+                </b>
+                    <!--End Logo icon -->
+                    <!--&lt;!&ndash; Logo text &ndash;&gt;<span>-->
+                    <!--&lt;!&ndash; dark Logo text &ndash;&gt;-->
+                    <!--<img src="assets/images/logo-text.png" alt="homepage" class="dark-logo" />-->
+                    <!--&lt;!&ndash; Light Logo text &ndash;&gt;    -->
+                    <!--<img src="assets/images/logo-light-text.png" class="light-logo" alt="homepage" /></span> </a>-->
+            </div>
+            <!-- ============================================================== -->
+            <!-- End Logo -->
+            <!-- ============================================================== -->
+            <div class="navbar-collapse">
+                <!-- ============================================================== -->
+                <!-- toggle and nav items -->
+                <!-- ============================================================== -->
+                <ul class="navbar-nav mr-auto">
+                    <!-- This is  -->
+                    <li class="nav-item hidden-sm-up"> <a class="nav-link nav-toggler waves-effect waves-light" href="javascript:void(0)"><i class="ti-menu"></i></a></li>
+                    <!-- ============================================================== -->
+                    <!-- Search -->
+                    <!-- ============================================================== -->
+                    <li class="nav-item search-box"> <a class="nav-link waves-effect waves-dark" href="javascript:void(0)"><i class="fa fa-search"></i></a>
+                        <form class="app-search">
+                            <input type="text" ng-model="searchtest" ng-keyup="testform($event)" class="form-control" placeholder="Search &amp; enter"> <a class="srh-btn"><i class="fa fa-times"></i></a>
+                        </form>
+                    </li>
+                </ul>
+                <ul class="navbar-nav my-lg-0">
+                    <!-- ============================================================== -->
+                    <!-- User profile and search -->
+                    <!-- ============================================================== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-muted waves-effect waves-dark" href="" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><img src="assets/images/users/logo.jpg" alt="user" class="img-circle" width="30"></a>
+                    </li>
+                    <!-- ============================================================== -->
+                    <!-- User profile and search -->
+                    <!-- ============================================================== -->
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <!-- ============================================================== -->
+    <!-- End Topbar header -->
+    <!-- ============================================================== -->
+    <!-- ============================================================== -->
+    <!-- Left Sidebar - style you can find in sidebar.scss  -->
+    <!-- ============================================================== -->
+    <aside class="left-sidebar">
+        <div class="d-flex no-block nav-text-box align-items-center">
+            <span><img src="assets/images/logo-icon.png" alt="elegant admin template"></span>
+            <a class="waves-effect waves-dark ml-auto hidden-sm-down" href="javascript:void(0)"><i class="ti-menu"></i></a>
+            <a class="nav-toggler waves-effect waves-dark ml-auto hidden-sm-up" href="javascript:void(0)"><i class="ti-menu ti-close"></i></a>
+        </div>
+        <!-- Sidebar scroll-->
+        <div class="scroll-sidebar">
+            <!-- Sidebar navigation-->
+            <nav class="sidebar-nav">
+                <ul id="sidebarnav">
+                    <li> <a class="waves-effect waves-dark" href="pages-data.html" aria-expanded="false"><i class="fa fa-tachometer"></i><span class="hide-menu">构建轨迹数据集</span></a></li>
+                    <li> <a class="waves-effect waves-dark" href="pages-hotpoint.html" aria-expanded="false"><i class="fa fa-user-circle-o"></i><span class="hide-menu">轨迹分析</span></a></li>
+                </ul>
+            </nav>
+            <!-- End Sidebar navigation -->
+        </div>
+        <!-- End Sidebar scroll-->
+    </aside>
+    <!-- ============================================================== -->
+    <!-- End Left Sidebar - style you can find in sidebar.scss  -->
+    <!-- ============================================================== -->
+    <!-- ============================================================== -->
+    <!-- Page wrapper  -->
+    <!-- ============================================================== -->
+    <div class="page-wrapper">
+        <!-- ============================================================== -->
+        <!-- Container fluid  -->
+        <!-- ============================================================== -->
+        <div class="container-fluid">
+            <!-- ============================================================== -->
+            <!-- Bread crumb and right sidebar toggle -->
+            <!-- ============================================================== -->
+            <div class="row page-titles">
+                <div class="col-md-5 align-self-center">
+                    <h4 class="text-themecolor">轨迹热点分析</h4>
+                </div>
+                <div class="col-md-7 align-self-center text-right">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="javascript:void(0)">主页</a></li>
+                            <li class="breadcrumb-item active">轨迹热点分析</li>
+                        </ol>
+                        <!--<button type="button" class="btn btn-success d-none d-lg-block m-l-15">人工标注</button>-->
+                    </div>
+                </div>
+            </div>
+            <!-- ============================================================== -->
+            <!-- End Bread crumb and right sidebar toggle -->
+            <!-- ============================================================== -->
+            <!-- ============================================================== -->
+            <!-- Start Page Content -->
+            <!-- ============================================================== -->
+            <!-- Row -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">日期选择</h4>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <input type="text" id="test1">
+                                <button type="button" class="btn btn-info btn-xs"
+                                        ng-click="dateConfirm()">
+                                    <span class="fa fa-check">确认</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card card-group" >
+                        <div class="card-body">
+                            <h4 class="card-title">轨迹热点地图</h4>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="card" >
+                                        <div class="card-body">
+                                            <table id="demo" lay-filter="test"></table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <ul class="nav nav-tabs card-header-tabs">
+                                                <li class="nav-item">
+                                                    <a class="{{isactive1}}" ng-click="showHotpointMap()">轨迹热点地图</a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="{{isactive2}}" ng-click="showHotpoint()">热点目的地</a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="card-body" ng-show="hotpointMapShow">
+                                            <div id="allmap" style="height: 500px;"></div>
+                                        </div>
+                                        <div class="card-body" ng-show="hotpointShow">
+                                            <div id="hotMap" style="height: 500px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card" style="background: wheat">
+                                <div class="card-body">
+                                    <h5 class="card-title">轨迹热点汇总</h5>
+                                    <table class="table">
+                                        <thead>
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">用户ID</th>
+                                            <th scope="col">经度</th>
+                                            <th scope="col">维度</th>
+                                            <th scope="col">驻留时间(小时)</th>
+                                            <th scope="col">驻留地标注</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="stop in stoppingPoint">
+                                            <th scope="row" ng-bind="$index+1"></th>
+                                            <td>{{stop.userId}}</td>
+                                            <td>{{stop.lng}}</td>
+                                            <td>{{stop.lat}}</td>
+                                            <td>{{stop.stayTime}}</td>
+                                            <td>{{stop.locLabeled}}</td>
+                                            <!--<td>-->
+                                            <!--<button type="button" class="btn btn-danger btn-sm"-->
+                                            <!--ng-click="deleteSetting(label)">删除-->
+                                            <!--</button>-->
+                                            <!--</td>-->
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4 class="card-title">分布</h4>
+                                    <div class="row">
+                                        <div id="hourRecord"  style="height:400px;width:100%;" ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Row -->
+            <!-- ============================================================== -->
+            <!-- End PAge Content -->
+            <!-- ============================================================== -->
+        </div>
+        <!-- ============================================================== -->
+        <!-- End Container fluid  -->
+        <!-- ============================================================== -->
+    </div>
+    <!-- ============================================================== -->
+    <!-- End Page wrapper  -->
+    <!-- ============================================================== -->
+    <!-- ============================================================== -->
+    <!-- footer -->
+    <!-- ============================================================== -->
+    <footer class="footer">
+        Copyright &copy; Li Jiajie 2020
+    </footer>
+    <!-- ============================================================== -->
+    <!-- End footer -->
+    <!-- ============================================================== -->
+</div>
+<!-- ============================================================== -->
+<!-- End Wrapper -->
+<!-- ============================================================== -->
+<!-- ============================================================== -->
+<!-- All Jquery -->
+<!-- ============================================================== -->
+<script src="assets/node_modules/jquery/jquery-3.2.1.min.js"></script>
+<!-- Bootstrap tether Core JavaScript -->
+<script src="assets/node_modules/popper/popper.min.js"></script>
+<script src="assets/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+<!-- slimscrollbar scrollbar JavaScript -->
+<script src="dist/js/perfect-scrollbar.jquery.min.js"></script>
+<!--Wave Effects -->
+<script src="dist/js/waves.js"></script>
+<!--Menu sidebar -->
+<script src="dist/js/sidebarmenu.js"></script>
+<!--stickey kit -->
+<script src="assets/node_modules/sticky-kit-master/dist/sticky-kit.min.js"></script>
+<script src="assets/node_modules/sparkline/jquery.sparkline.min.js"></script>
+<!--Custom JavaScript -->
+<script src="dist/js/custom.min.js"></script>
+</body>
+
+</html>

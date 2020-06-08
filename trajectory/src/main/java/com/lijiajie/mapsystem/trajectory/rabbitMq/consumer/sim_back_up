@@ -1,0 +1,102 @@
+package com.lijiajie.mapsystem.trajectory.rabbitMq.consumer;
+
+import com.lijiajie.mapsystem.trajectory.pojo.SimulationLocation;
+import com.lijiajie.mapsystem.trajectory.pojo.WebCurrentStomp;
+import com.lijiajie.mapsystem.trajectory.rabbitMq.producer.WebCurrentProducer;
+import com.lijiajie.mapsystem.trajectory.service.FencingService;
+import com.lijiajie.mapsystem.trajectory.util.JedisUtil;
+import lombok.Data;
+import org.apache.ibatis.jdbc.Null;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.Scope;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+
+/**
+ * @describe 获取rabbitmq对象的监听器接口。这个接口主要将完整的坐标类相关信息做数据持久化
+ * 目前用来接受模拟的坐标，由于模拟坐标并发，前端单目标实时展示以及地理围栏系统需要重新筛选
+ * 目标id并转发。
+ */
+@Component
+@RabbitListener(queues = SimulationLocation.QUEUE)
+@Data
+@Scope(BeanDefinition.SCOPE_PROTOTYPE)
+//@Scope("prototype")
+public class SimulationLocConsumer {
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
+    private String KEY_NAME="currentPoint";
+
+    private String INSIDE_USER_SET="insideUserSet";
+
+    @Autowired
+    JedisUtil jedisUtil;
+
+    @Autowired
+    WebCurrentProducer webCurrentProducer;
+
+    @Value("123")
+    private String targetUserId;
+
+    private List<Map<String,Double>> fencingList;
+
+    private Integer taskId;
+
+    @Autowired
+    FencingService fencingService;
+
+    @RabbitHandler
+    public void onMessage(SimulationLocation locationInfo) {
+        System.out.println("[onMessage]targetId::::"+taskId);
+        List<Point2D.Double> fencingTransList = new ArrayList<>();
+        if(taskId!=null){
+            if(fencingList==null){
+                logger.info("[onMessage][线程编号:{},未设置区划围栏，不做处理]", Thread.currentThread().getId());
+            }else {
+                for (Map<String,Double> fencingPoint:fencingList){
+                    fencingTransList.add(new Point2D.Double(fencingPoint.get("lng"),fencingPoint.get("lat")));
+                }
+                Point2D.Double targetPoint = new Point2D.Double(locationInfo.getLng(),locationInfo.getLat());
+                boolean isFencing = fencingService.isInPolygon(targetPoint, fencingTransList);
+                if(isFencing){
+                    Map<String,Object> recordRedisLoc = new HashMap<>();
+                    recordRedisLoc.put("locationName",locationInfo.getLocName());
+                    recordRedisLoc.put("userId",locationInfo.getUserId());
+                    recordRedisLoc.put("lng",locationInfo.getLng());
+                    recordRedisLoc.put("lat",locationInfo.getLat());
+                    if(!jedisUtil.sismember(INSIDE_USER_SET+"_"+taskId,locationInfo.getUserId())){
+                        jedisUtil.sadd(INSIDE_USER_SET+"_"+taskId,locationInfo.getUserId());
+                    }
+                    jedisUtil.setMap(KEY_NAME+"_"+taskId+"_"+locationInfo.getUserId(), recordRedisLoc);
+                    logger.info("[onMessage][线程编号:{},目标在区划围栏中存入缓存, id:{}]", Thread.currentThread().getId(), recordRedisLoc.get("userId"));
+                    if(targetUserId.equals(locationInfo.getUserId())){
+                        logger.info("[web stomp][线程编号:{} id:{}]", Thread.currentThread().getId(), recordRedisLoc.get("userId"));
+                        webCurrentProducer.syncSend(locationInfo);
+                    }
+                }else {
+                    if(jedisUtil.sismember(INSIDE_USER_SET+"_"+taskId,locationInfo.getUserId())){
+                        jedisUtil.srem(INSIDE_USER_SET+"_"+taskId,locationInfo.getUserId());
+                        logger.info("[onMessage][线程编号:{},离开区划围栏]", Thread.currentThread().getId());
+                    }else {
+                        logger.info("[onMessage][线程编号:{},不在区划围栏中，不做处理]", Thread.currentThread().getId());
+                    }
+                }
+            }
+        }else{
+            logger.info("[onMessage][线程编号:{},未设置任务id，不执行目标筛选]", Thread.currentThread().getId());
+        }
+    }
+}
