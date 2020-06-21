@@ -9,4 +9,5 @@ public class Fencing {
     private String fencingDescribe;
     private String fencingJson;
     private int isFilterFencing;
+    private int taskId;
 }

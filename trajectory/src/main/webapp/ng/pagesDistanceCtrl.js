@@ -59,7 +59,9 @@ indexApp
                             console.log(data.value); //得到被选中的值
                             let selectFencingName = data.value.split(":")[1];
                             let fencingId=selectFencingName.split("_")[0];
+                            $scope.showSwitch="关";
                             confirmFencing(fencingId);
+
                         });
 
                     });
@@ -80,7 +82,8 @@ indexApp
                 }).then(function(resp, status) {
                     $scope.status = status;
                     console.log(resp.data);
-                    getAllDistance();
+                    //getAllDistance();
+                    $scope.intervalCalculate();
                 }, function(resp, status) {
                     $scope.resp = resp;
                     $scope.status = status;

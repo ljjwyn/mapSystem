@@ -103,6 +103,7 @@ indexApp
                 })
             };
 
+
             $scope.fencingDescribe = undefined;
             $scope.confirm = function () {
                 if($scope.fencingDescribe===null){
@@ -118,7 +119,8 @@ indexApp
                             "fencingDescribe":$scope.fencingDescribe,
                             "fencingPoints":$scope.fencingPointList,
                             "isFilterFencing":1,
-                            "userId":""
+                            "userId":"",
+                            "taskId":0
                         }
                     }).then(function(resp, status) {
                         $scope.status = status;
@@ -133,5 +135,33 @@ indexApp
                         $scope.status = status;
                     });
                 }
-            }
+            };
+
+            /**
+             * @description 清空地图上画过的轨迹并删除后端数据库的围栏信息。
+             */
+            $scope.deleteFencing=function(fencing){
+                $http({
+                    url : 'fencing/deleteareafencing',
+                    method : 'POST',
+                    data : {
+                        "fencingId":fencing.id
+                    }
+                }).then(function(resp, status) {
+                    $scope.status = status;
+                    console.log(resp.data);
+                    swal.fire({
+                        title:resp.data["state"],
+                        timer:2000
+                    });
+                    if(resp.data["state"]==="success"){
+                        $scope.reSetFencing();
+                        getAllFencing();
+                    }
+                }, function(resp, status) {
+                    $scope.resp = resp;
+                    $scope.status = status;
+                });
+                //map.clearOverlays();
+            };
         });

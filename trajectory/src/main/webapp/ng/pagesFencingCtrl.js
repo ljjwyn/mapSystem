@@ -251,6 +251,7 @@ indexApp
             /**
              * @description 完成围栏绘制并将参数信息回传后端，后端将围栏信息存缓存与数据库
              */
+            $scope.isNewFencing=false;
             $scope.finshFencing=function () {
                 let pointList = [];
                 for (var i = 0; i < $scope.fencingPointList.length; i++) {
@@ -263,12 +264,14 @@ indexApp
 
                 //回传围栏边界点。注意传用户id与任务id，做到任务隔离。
                 $http({
-                    url : 'fencing/getfencing',
+                    url : 'fencing/setfilterfencing',
                     method : 'POST',
                     data : {
                         "fencingPoints":$scope.fencingPointList,
                         "taskId":$scope.taskId,
-                        "userId":$scope.userId
+                        "userId":$scope.userId,
+                        "isFilterFencing":0,
+                        "fencingDescribe":""
                     }
                 }).then(function(resp, status) {
                     $scope.status = status;
@@ -283,6 +286,44 @@ indexApp
                 });
 
             };
+
+            /**
+             * @description 加载当前用户当前任务设置过的围栏
+             */
+            $scope.loadUserFencing=function(){
+                $http({
+                    url : 'fencing/getfencingpoints',
+                    method : 'POST',
+                    data : {
+                        "taskId":$scope.taskId,
+                        "userId":$scope.userId
+                    }
+                }).then(function(resp, status) {
+                    $scope.status = status;
+                    console.log(resp.data);
+                    if(resp.data["state"]==="success"){
+                        $scope.fencingPointList=resp.data["fencingPoints"];
+                        let pointList = [];
+                        for (let i = 0; i < $scope.fencingPointList.length; i++) {
+                            pointList.push(new BMap.Point($scope.fencingPointList[i]["lng"], $scope.fencingPointList[i]["lat"]));
+                        }
+                        console.log(pointList);
+                        let polygon = new BMap.Polygon(pointList, {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});  //创建多边形
+                        polygon.name="fencingLine";
+                        map.addOverlay(polygon);
+                    }else {
+                        $scope.isNewFencing=true;
+                    }
+                    swal.fire({
+                        title:resp.data["message"],
+                        timer:2000
+                    })
+                }, function(resp, status) {
+                    $scope.resp = resp;
+                    $scope.status = status;
+                });
+            };
+
             /**
              * @description 清空地图上画过的轨迹
              * 注意这里用的是定点清理，不是重置地图，这个方法挺好～
@@ -296,7 +337,35 @@ indexApp
                     }if(item.name === "markPoint") {
                         map.removeOverlay(item)
                     }
-                })
+                });
+            };
+
+            /**
+             * @description 清空地图上画过的轨迹并删除后端数据库的围栏信息。
+             */
+            $scope.deleteFencing=function(){
+                $http({
+                    url : 'fencing/deleteuserfencing',
+                    method : 'POST',
+                    data : {
+                        "taskId":$scope.taskId,
+                        "userId":$scope.userId
+                    }
+                }).then(function(resp, status) {
+                    $scope.status = status;
+                    console.log(resp.data);
+                    swal.fire({
+                        title:resp.data["state"],
+                        timer:2000
+                    });
+                    if(resp.data["state"]==="success"){
+                        $scope.reSetFencing();
+                        $scope.isNewFencing=true;
+                    }
+                }, function(resp, status) {
+                    $scope.resp = resp;
+                    $scope.status = status;
+                });
                 //map.clearOverlays();
             };
 
@@ -444,7 +513,8 @@ indexApp
                     url : 'fencing/isinfencing',
                     method : 'POST',
                     data : {
-                        "userId":$scope.userId //先写死，最后配置多用户时选择或者cookie传值
+                        "userId":$scope.userId, //先写死，最后配置多用户时选择或者cookie传值
+                        "taskId":$scope.taskId
                     }
                 }).then(function(resp, status) {
                     $scope.status = status;

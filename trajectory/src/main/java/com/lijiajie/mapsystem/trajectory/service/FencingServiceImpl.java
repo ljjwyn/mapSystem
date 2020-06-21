@@ -1,12 +1,98 @@
 package com.lijiajie.mapsystem.trajectory.service;
 
+import com.alibaba.fastjson.JSON;
+import com.lijiajie.mapsystem.trajectory.mapper.FencingMapper;
+import com.lijiajie.mapsystem.trajectory.pojo.Fencing;
+import com.lijiajie.mapsystem.trajectory.util.JedisUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.awt.geom.Point2D;
-import java.util.List;
+import java.util.*;
 
 @Service
-public class FencingServiceImpl {
+public class FencingServiceImpl implements FencingService {
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    FencingMapper fencingMapper;
+
+    @Autowired
+    JedisUtil jedisUtil;
+
+    @Override
+    public List<Map<String, Double>> getFencingPoints(String userId, int taskId) {
+        String fencingName = "fencing_"+taskId+"_"+userId;
+        List<Map<String,Double>> fencingList = new ArrayList<>();
+        if(jedisUtil.exists(fencingName)){
+            fencingList=jedisUtil.getList(fencingName);
+            log.info("获取到缓存围栏坐标点");
+            return fencingList;
+        }else {
+            /**
+             * @describe 目前redis没有设置过期时间，ttl为-1。当设置过期时间后就需要redis判断并读取sql
+             */
+            Fencing fencing = fencingMapper.getAUserFencing(userId,taskId);
+            if(fencing!=null){
+                HashMap fencingMap = JSON.parseObject(fencing.getFencingJson(), HashMap.class);
+                ArrayList fencingPoints = (ArrayList) fencingMap.get("fencingJSON");
+                List<Map<String,Double>> recordList = new ArrayList<>();
+                for (Object fencingPoint1 : fencingPoints) {
+                    LinkedHashMap fencingPoint = (LinkedHashMap) fencingPoint1;
+                    Map<String, Double> tempMap = new HashMap<>();
+                    tempMap.put("lng", (Double) fencingPoint.get("lng"));
+                    tempMap.put("lat", (Double) fencingPoint.get("lat"));
+                    fencingList.add(tempMap);
+                }
+                jedisUtil.setList("fencing_"+fencing.getTaskId()+"_"+fencing.getUserId(),recordList);
+                log.info("任务:{},用户:{}，个人围栏存入缓存，fencingId:{}",fencing.getTaskId(), fencing.getUserId(), fencing.getId());
+                return fencingList;
+            }else {
+                return null;
+            }
+        }
+    }
+
+    @Override
+    public int createAFencing(Fencing fencing, ArrayList fencingPoints) {
+        int isAreaFencing = 0;
+        fencingMapper.createAFencing(fencing);
+        List<Map<String,Double>> recordList = new ArrayList<>();
+        for (Object fencingPoint1 : fencingPoints) {
+            Map<String, Double> tempMap = new HashMap<>();
+            LinkedHashMap fencingPoint = (LinkedHashMap) fencingPoint1;
+            tempMap.put("lng", (Double) fencingPoint.get("lng"));
+            tempMap.put("lat", (Double) fencingPoint.get("lat"));
+            recordList.add(tempMap);
+        }
+        if(fencing.getIsFilterFencing()==1){
+            isAreaFencing=1;
+            jedisUtil.setList("fencing_"+fencing.getId(),recordList);
+            log.info("区划围栏存入缓存，fencingId:{}",fencing.getId());
+        }else {
+            jedisUtil.setList("fencing_"+fencing.getTaskId()+"_"+fencing.getUserId(),recordList);
+            //jedisUtil.expire("fencing_"+fencing.getTaskId()+"_"+fencing.getUserId(),60000);
+            log.info("任务:{},用户:{}，个人围栏存入缓存，fencingId:{}",fencing.getTaskId(), fencing.getUserId(), fencing.getId());
+        }
+        return isAreaFencing;
+    }
+
+    @Override
+    public void deleteAreaFencing(int fencingId) {
+        jedisUtil.del("fencing_"+fencingId);
+        fencingMapper.deleteAreaFencing(fencingId);
+        log.info("删除区划围栏,id:{}",fencingId);
+    }
+
+    @Override
+    public void deletAUserFencing(String userId, int taskId) {
+        jedisUtil.del("fencing_"+taskId+"_"+userId);
+        fencingMapper.deleteAUserFencing(userId,taskId);
+        log.info("删除用户围栏,userId:{},taskId:{}",userId,taskId);
+    }
+
     /**
      * 判断点是否在电子栏杆之内
      * @Title: IsPointInPoly

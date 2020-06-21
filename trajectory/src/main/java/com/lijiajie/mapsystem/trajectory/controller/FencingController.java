@@ -49,6 +49,11 @@ public class FencingController {
     @Autowired
     FilterTarget filterTarget;
 
+    /**
+     * @deprecated
+     * @param requestParam
+     * @return
+     */
     @RequestMapping(value = "/getfencing",method = RequestMethod.POST)
     @ResponseBody
     public String getFencing(@RequestBody Map<String, Object> requestParam){
@@ -72,34 +77,6 @@ public class FencingController {
         return responseMap.toJSONString();
     }
 
-    @RequestMapping(value = "/isinfencing",method = RequestMethod.POST)
-    @ResponseBody
-    public String isInFencing(@RequestBody Map<String, String> requestParam){
-        JSONObject resultMap = new JSONObject();
-        String redisKey = KEY_NAME+"_"+requestParam.get("userId");
-        Map<String,Object> currentLoc = jedisUtil.getMap(redisKey);
-        if(currentLoc==null){
-            log.info("未获取到相关用户的实时坐标");
-            resultMap.put("state","error");
-            resultMap.put("message","未获取到相关用户的实时坐标");
-            resultMap.put("isFencing",null);
-            return resultMap.toJSONString();
-        }else {
-            List<Point2D.Double> fencingTransList = new ArrayList<>();
-            List<Map<String,Double>> fencingList = jedisUtil.getList("fencing");
-            for (Map<String,Double> fencingPoint:fencingList){
-                fencingTransList.add(new Point2D.Double(fencingPoint.get("lng"),fencingPoint.get("lat")));
-            }
-            Point2D.Double targetPoint = new Point2D.Double((Double) currentLoc.get("lng"),(Double) currentLoc.get("lat"));
-            boolean isFencing = fencingService.isInPolygon(targetPoint, fencingTransList);
-            resultMap.put("state","success");
-            resultMap.put("message","成功解析redis的数据，进行边界计算");
-            resultMap.put("isFencing",isFencing);
-            log.info("计算结果是否在围栏中：{}",isFencing);
-            return resultMap.toJSONString();
-        }
-    }
-
 
     @RequestMapping(value = "/setfilterfencing",method = RequestMethod.POST)
     @ResponseBody
@@ -110,30 +87,24 @@ public class FencingController {
         ArrayList fencingPoints = (ArrayList) requestParam.get("fencingPoints");
         String fencingDescribe = (String)requestParam.get("fencingDescribe");
         String userId = (String)requestParam.get("userId");
+        int taskId =Integer.valueOf((String)requestParam.get("taskId"));
+        int isFilterFencing = (Integer) requestParam.get("isFilterFencing");
         if(userId.isEmpty()){
             userId="None";
         }
         if(fencingDescribe.isEmpty()){
-            fencingDescribe="用户："+requestParam.get("userId")+"的个人围栏";
+            fencingDescribe="任务："+taskId+",用户："+userId+"的个人围栏";
         }
-        int isFilterFencing = (Integer) requestParam.get("isFilterFencing");
         fencingJsonStr.put("fencingJSON",fencingPoints);
         fencing.setFencingJson(fencingJsonStr.toJSONString());
         fencing.setFencingDescribe(fencingDescribe);
         fencing.setUserId(userId);
         fencing.setIsFilterFencing(isFilterFencing);
-        fencingMapper.createAFencing(fencing);
-        List<Map<String,Double>> recordList = new ArrayList<>();
-        for (Object fencingPoint1 : fencingPoints) {
-            Map<String, Double> tempMap = new HashMap<>();
-            LinkedHashMap fencingPoint = (LinkedHashMap) fencingPoint1;
-            tempMap.put("lng", (Double) fencingPoint.get("lng"));
-            tempMap.put("lat", (Double) fencingPoint.get("lat"));
-            recordList.add(tempMap);
-        }
-        jedisUtil.setList("fencing_"+fencing.getId(),recordList);
-        log.info("更新围栏电子坐标完成");
+        fencing.setTaskId(taskId);
+        int isAreaFencing = fencingService.createAFencing(fencing,fencingPoints);
+        responseMap.put("fencingType",isAreaFencing);
         responseMap.put("state","success");
+        log.info("[setFilterFencing]设置围栏电子坐标完成");
         return responseMap.toJSONString();
     }
 
@@ -155,6 +126,76 @@ public class FencingController {
         filterTarget.filterByFencing(requestParam.get("taskId"),requestParam.get("fencingId"));
         schedulDistance.setTaskId(requestParam.get("taskId"));
         log.info("[startFilter],选择区划围栏id：{},任务：{},开始筛选目标",requestParam.get("fencingId"),requestParam.get("taskId"));
+    }
+
+    @RequestMapping(value = "/isinfencing",method = RequestMethod.POST)
+    @ResponseBody
+    public String isInFencing(@RequestBody Map<String, Object> requestParam){
+        JSONObject resultMap = new JSONObject();
+        String userId = (String)requestParam.get("userId");
+        String redisKey = KEY_NAME+"_"+userId;
+        int taskId = Integer.valueOf((String) requestParam.get("taskId"));
+        Map<String,Object> currentLoc = jedisUtil.getMap(redisKey);
+        if(currentLoc==null){
+            log.info("未获取到相关用户的实时坐标");
+            resultMap.put("state","error");
+            resultMap.put("message","未获取到相关用户的实时坐标");
+            resultMap.put("isFencing",null);
+            return resultMap.toJSONString();
+        }else {
+            List<Point2D.Double> fencingTransList = new ArrayList<>();
+            List<Map<String,Double>> fencingList = fencingService.getFencingPoints(userId,taskId);
+            for (Map<String,Double> fencingPoint:fencingList){
+                fencingTransList.add(new Point2D.Double(fencingPoint.get("lng"),fencingPoint.get("lat")));
+            }
+            Point2D.Double targetPoint = new Point2D.Double((Double) currentLoc.get("lng"),(Double) currentLoc.get("lat"));
+            boolean isFencing = fencingService.isInPolygon(targetPoint, fencingTransList);
+            resultMap.put("state","success");
+            resultMap.put("message","成功解析redis的数据，进行边界计算");
+            resultMap.put("isFencing",isFencing);
+            log.info("计算结果是否在围栏中：{}",isFencing);
+            return resultMap.toJSONString();
+        }
+    }
+
+    @RequestMapping(value = "/getfencingpoints",method = RequestMethod.POST)
+    @ResponseBody
+    public String getFencingPoints(@RequestBody Map<String, Object> requestParam){
+        JSONObject response = new JSONObject();
+        String userId =(String) requestParam.get("userId");
+        int taskId = Integer.valueOf((String) requestParam.get("taskId"));
+        List<Map<String,Double>> fencingList = fencingService.getFencingPoints(userId,taskId);
+        if(fencingList==null){
+            response.put("fencingPoints",null);
+            response.put("state","error");
+            response.put("message","该任务下该用户未设置围栏");
+        }else {
+            response.put("fencingPoints",fencingList);
+            response.put("state","success");
+            response.put("message","获取围栏成功");
+        }
+        return response.toJSONString();
+    }
+
+    @RequestMapping(value = "/deleteareafencing",method = RequestMethod.POST)
+    @ResponseBody
+    public String deleteAreaFencing(@RequestBody Map<String, Object> requestParam){
+        JSONObject response = new JSONObject();
+        int fencingId =(Integer) requestParam.get("fencingId");
+        fencingService.deleteAreaFencing(fencingId);
+        response.put("state","success");
+        return response.toJSONString();
+    }
+
+    @RequestMapping(value = "/deleteuserfencing",method = RequestMethod.POST)
+    @ResponseBody
+    public String deleteUserFencing(@RequestBody Map<String, Object> requestParam){
+        JSONObject response = new JSONObject();
+        String userId =(String) requestParam.get("userId");
+        int taskId = Integer.valueOf((String) requestParam.get("taskId"));
+        fencingService.deletAUserFencing(userId,taskId);
+        response.put("state","success");
+        return response.toJSONString();
     }
 
 }
